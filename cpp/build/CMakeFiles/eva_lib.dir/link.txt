@@ -1,0 +1,2 @@
+/usr/bin/ar qc libeva_lib.a CMakeFiles/eva_lib.dir/src/Environment.cpp.o CMakeFiles/eva_lib.dir/src/AST.cpp.o CMakeFiles/eva_lib.dir/src/Parser.cpp.o
+/usr/bin/ranlib libeva_lib.a
