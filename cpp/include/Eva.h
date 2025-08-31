@@ -46,6 +46,10 @@ private:
     void setupGlobalEnvironment();
     static std::shared_ptr<Environment> createGlobalEnvironment();
 
+    // Helper functions for creating AST nodes
+    static ASTNodePtr makeSymbol(const std::string& name);
+    static ASTNodePtr makeList(const std::vector<ASTNodePtr>& elements);
+
     // User function representation
     struct UserFunction {
         std::vector<std::string> params;

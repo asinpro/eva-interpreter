@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 Eva::Eva() : Eva(createGlobalEnvironment()) {
 }
@@ -174,13 +175,11 @@ Eva::Value Eva::eval(ASTNodePtr exp, std::shared_ptr<Environment> env) {
         const auto& elements = list_node->getElements();
         auto first = std::dynamic_pointer_cast<SymbolNode>(elements[0]);
         
-        if (!first) {
-            throw std::runtime_error("First element of list must be a symbol");
-        }
-        
-        const std::string& tag = first->getName();
-        
-        // Variable declaration: (var x 10)
+        // If the first element is a symbol, check for special forms
+        if (first) {
+            const std::string& tag = first->getName();
+            
+            // Variable declaration: (var x 10)
         if (tag == "var") {
             if (elements.size() != 3) {
                 throw std::runtime_error("var expects 2 arguments");
@@ -428,7 +427,64 @@ Eva::Value Eva::eval(ASTNodePtr exp, std::shared_ptr<Environment> env) {
             return classEnv->getParent();
         }
         
-        // Function calls: (+ 1 2), (print "hello")
+        // Module declaration: (module name body)
+        if (tag == "module") {
+            if (elements.size() != 3) {
+                throw std::runtime_error("module expects 2 arguments");
+            }
+            auto name_node = std::dynamic_pointer_cast<SymbolNode>(elements[1]);
+            if (!name_node) {
+                throw std::runtime_error("Module name must be a symbol");
+            }
+            const std::string& name = name_node->getName();
+            
+            // Create module environment
+            auto moduleEnv = Environment::create({}, env);
+            
+            // Evaluate module body in module environment
+            eval(elements[2], moduleEnv);
+            
+            // Define module in current environment
+            return env->define(name, moduleEnv);
+        }
+        
+        // Module import: (import name)
+        if (tag == "import") {
+            if (elements.size() != 2) {
+                throw std::runtime_error("import expects 1 argument");
+            }
+            auto name_node = std::dynamic_pointer_cast<SymbolNode>(elements[1]);
+            if (!name_node) {
+                throw std::runtime_error("Module name must be a symbol");
+            }
+            const std::string& name = name_node->getName();
+            
+            // Read module file
+            std::string filename = "modules/" + name + ".eva";
+            std::ifstream file(filename);
+            if (!file.is_open()) {
+                throw std::runtime_error("Cannot open module file: " + filename);
+            }
+            
+            std::string moduleSrc((std::istreambuf_iterator<char>(file)),
+                                 std::istreambuf_iterator<char>());
+            file.close();
+            
+            // Parse and evaluate as module
+            auto body = EvaParser::parse("(begin " + moduleSrc + ")");
+            std::vector<ASTNodePtr> moduleElements = {
+                makeSymbol("module"),
+                makeSymbol(name),
+                body
+            };
+            auto moduleExp = makeList(moduleElements);
+            
+            return eval(moduleExp, global_);
+        }
+        
+        } // End of special forms (if first element is a symbol)
+        
+        // Function calls: (+ 1 2), (print "hello"), ((prop obj func) args...)
         auto fn_value = eval(elements[0], env);
         std::vector<Value> args;
         for (size_t i = 1; i < elements.size(); i++) {
@@ -474,4 +530,13 @@ Eva::Value Eva::callUserDefinedFunction(const Value& fn, const std::vector<Value
     } catch (const std::bad_any_cast&) {
         throw std::runtime_error("Not a function");
     }
+}
+
+// Helper functions for creating AST nodes (used in module import)
+ASTNodePtr Eva::makeSymbol(const std::string& name) {
+    return std::make_shared<SymbolNode>(name);
+}
+
+ASTNodePtr Eva::makeList(const std::vector<ASTNodePtr>& elements) {
+    return std::make_shared<ListNode>(elements);
 }
