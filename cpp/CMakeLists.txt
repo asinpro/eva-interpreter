@@ -41,6 +41,9 @@ target_link_libraries(test_class_simple eva_lib)
 add_executable(test_module tests/test_module.cpp)
 target_link_libraries(test_module eva_lib)
 
+add_executable(test_extended_features tests/test_extended_features.cpp)
+target_link_libraries(test_extended_features eva_lib)
+
 # CLI executable
 add_executable(eva bin/eva.cpp)
 target_link_libraries(eva eva_lib)
@@ -53,3 +56,4 @@ add_test(NAME EvaTest COMMAND test_eva)
 add_test(NAME TransformerTest COMMAND test_transformer)
 add_test(NAME ClassTest COMMAND test_class)
 add_test(NAME ModuleTest COMMAND test_module)
+add_test(NAME ExtendedFeaturesTest COMMAND test_extended_features)

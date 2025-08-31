@@ -21,9 +21,10 @@ int main(int argc, char* argv[]) {
     Eva eva;
     
     try {
+        Eva::Value result;
         if (mode == "-e") {
             // Direct expression
-            eva.evalGlobal(input);
+            result = eva.evalGlobal(input);
         } else if (mode == "-f") {
             // Eva file
             std::ifstream file(input);
@@ -36,11 +37,58 @@ int main(int argc, char* argv[]) {
                               std::istreambuf_iterator<char>());
             file.close();
             
-            eva.evalGlobal("(begin " + content + ")");
+            result = eva.evalGlobal("(begin " + content + ")");
         } else {
             std::cerr << "Error: Unknown mode " << mode << std::endl;
             printUsage();
             return 1;
+        }
+        
+        // Print the result
+        if (result.has_value()) {
+            try {
+                auto str = std::any_cast<std::string>(result);
+                std::cout << "\"" << str << "\"" << std::endl;
+            } catch (...) {
+                try {
+                    auto num = std::any_cast<int>(result);
+                    std::cout << num << std::endl;
+                } catch (...) {
+                    try {
+                        auto b = std::any_cast<bool>(result);
+                        std::cout << (b ? "true" : "false") << std::endl;
+                    } catch (...) {
+                        try {
+                            auto vec = std::any_cast<std::vector<Eva::Value>>(result);
+                            std::cout << "(";
+                            for (size_t i = 0; i < vec.size(); i++) {
+                                if (i > 0) std::cout << " ";
+                                try {
+                                    auto str = std::any_cast<std::string>(vec[i]);
+                                    std::cout << "\"" << str << "\"";
+                                } catch (...) {
+                                    try {
+                                        auto num = std::any_cast<int>(vec[i]);
+                                        std::cout << num;
+                                    } catch (...) {
+                                        try {
+                                            auto b = std::any_cast<bool>(vec[i]);
+                                            std::cout << (b ? "true" : "false");
+                                        } catch (...) {
+                                            std::cout << "[object]";
+                                        }
+                                    }
+                                }
+                            }
+                            std::cout << ")" << std::endl;
+                        } catch (...) {
+                            std::cout << "[object]" << std::endl;
+                        }
+                    }
+                }
+            }
+        } else {
+            std::cout << "null" << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

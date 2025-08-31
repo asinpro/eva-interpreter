@@ -1,0 +1,105 @@
+(print "=== Eva Interpreter Extended Features Demo ===")
+
+(print "1. Basic arithmetic and variables")
+(var x 10)
+(var y 20)
+(print "Basic arithmetic:" (+ x y))
+
+(print "2. Logical operators")
+(print "Logical AND:" (and true false))
+(print "Logical OR:" (or true false))  
+(print "Logical NOT:" (not false))
+
+(print "3. Control flow - if statement with logical operators")
+(if (and (> x 5) (< y 25))
+    (print "Condition is true!")
+    (print "Condition is false!"))
+
+(print "4. While loop - countdown")
+(begin
+    (var counter 5)
+    (print "Countdown:")
+    (while (> counter 0)
+        (begin
+            (print counter)
+            (set counter (- counter 1))))
+    (print "Done!"))
+
+(print "5. Lists and list operations")
+(var mylist (list 1 2 3 4 5))
+(print "Original list:" mylist)
+(print "Head:" (head mylist))
+(print "Tail:" (tail mylist))
+(print "Length:" (length mylist))
+
+(print "6. Adding element to list")
+(var newlist (cons 0 mylist))
+(print "After cons 0:" newlist)
+(print "New length:" (length newlist))
+
+(print "7. String operations")
+(var greeting "Hello")
+(var target "World")
+(var message (concat greeting (concat " " target)))
+(print "Concatenated:" message)
+(print "Message length:" (length message))
+
+(print "8. Functions with recursion - factorial")
+(def factorial (n)
+    (if (< n 2)
+        1
+        (* n (factorial (- n 1)))))
+
+(print "Factorial of 5:" (factorial 5))
+
+(print "9. For loop (syntactic sugar)")
+(print "For loop countdown:")
+(for (var i 3) (> i 0) (set i (- i 1))
+    (print "i =" i))
+
+(print "10. Increment operators")
+(var count 0)
+(++ count)
+(print "After increment:" count)
+(+= count 5)
+(print "After += 5:" count)
+
+(print "11. Switch statement (syntactic sugar)")
+(var day 2)
+(var dayName (switch 
+    ((== day 1) "Monday")
+    ((== day 2) "Tuesday") 
+    ((== day 3) "Wednesday")
+    (true "Unknown")))
+(print "Day" day "is" dayName)
+
+(print "12. Lambda functions and closures")
+(var makeCounter (lambda (start)
+    (lambda ()
+        (begin
+            (set start (+ start 1))
+            start))))
+
+(var counter1 (makeCounter 0))
+(var counter2 (makeCounter 100))
+
+(print "Counter1:" (counter1) (counter1) (counter1))
+(print "Counter2:" (counter2) (counter2))
+
+(print "13. Nested expressions with all operators")
+(var result 
+    (if (or (> (length mylist) 3) (not (< x 5)))
+        (* (+ 2 3) (- 10 3))
+        (/ 20 4)))
+
+(print "Complex expression result:" result)
+
+(print "14. Block scoping")
+(begin
+    (var localVar "I'm local")
+    (print "Inside block:" localVar)
+    (begin
+        (var nestedVar "I'm nested")
+        (print "Nested block:" nestedVar localVar)))
+
+(print "=== Test completed successfully! ===")

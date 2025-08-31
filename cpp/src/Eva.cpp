@@ -109,6 +109,206 @@ std::shared_ptr<Environment> Eva::createGlobalEnvironment() {
         }
     }));
     
+    // Logical operators
+    global->define("and", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 2) throw std::runtime_error("and expects 2 arguments");
+        
+        // Convert first argument to boolean
+        bool a = false;
+        try {
+            a = std::any_cast<bool>(args[0]);
+        } catch (...) {
+            // For non-boolean types, only null/empty is false
+            if (!args[0].has_value()) {
+                a = false;
+            } else {
+                try {
+                    std::any_cast<std::nullptr_t>(args[0]);
+                    a = false;
+                } catch (...) {
+                    a = true; // all other values are truthy
+                }
+            }
+        }
+        
+        // Short-circuit: if first is false, return false
+        if (!a) return false;
+        
+        // Convert second argument to boolean
+        bool b = false;
+        try {
+            b = std::any_cast<bool>(args[1]);
+        } catch (...) {
+            // For non-boolean types, only null/empty is false
+            if (!args[1].has_value()) {
+                b = false;
+            } else {
+                try {
+                    std::any_cast<std::nullptr_t>(args[1]);
+                    b = false;
+                } catch (...) {
+                    b = true; // all other values are truthy
+                }
+            }
+        }
+        
+        return a && b;
+    }));
+    
+    global->define("or", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 2) throw std::runtime_error("or expects 2 arguments");
+        
+        // Convert first argument to boolean
+        bool a = false;
+        try {
+            a = std::any_cast<bool>(args[0]);
+        } catch (...) {
+            // For non-boolean types, only null/empty is false
+            if (!args[0].has_value()) {
+                a = false;
+            } else {
+                try {
+                    std::any_cast<std::nullptr_t>(args[0]);
+                    a = false;
+                } catch (...) {
+                    a = true; // all other values are truthy
+                }
+            }
+        }
+        
+        // Short-circuit: if first is true, return true
+        if (a) return true;
+        
+        // Convert second argument to boolean
+        bool b = false;
+        try {
+            b = std::any_cast<bool>(args[1]);
+        } catch (...) {
+            // For non-boolean types, only null/empty is false
+            if (!args[1].has_value()) {
+                b = false;
+            } else {
+                try {
+                    std::any_cast<std::nullptr_t>(args[1]);
+                    b = false;
+                } catch (...) {
+                    b = true; // all other values are truthy
+                }
+            }
+        }
+        
+        return a || b;
+    }));
+    
+    global->define("not", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("not expects 1 argument");
+        
+        // Convert argument to boolean
+        bool a = false;
+        try {
+            a = std::any_cast<bool>(args[0]);
+        } catch (...) {
+            // For non-boolean types, only null/empty is false
+            if (!args[0].has_value()) {
+                a = false;
+            } else {
+                try {
+                    std::any_cast<std::nullptr_t>(args[0]);
+                    a = false;
+                } catch (...) {
+                    a = true; // all other values are truthy
+                }
+            }
+        }
+        
+        return !a;
+    }));
+    
+    // Type checking functions (temporarily disabled due to infinite recursion issue)
+    /*
+    global->define("number?", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("number? expects 1 argument");
+        return args[0].type() == typeid(int);
+    }));
+    
+    global->define("string?", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("string? expects 1 argument");
+        return args[0].type() == typeid(std::string);
+    }));
+    
+    global->define("list?", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("list? expects 1 argument");
+        return args[0].type() == typeid(std::vector<Value>);
+    }));
+    */
+    
+    // List operations
+    global->define("list", NativeFunction([](const std::vector<Value>& args) -> Value {
+        return args; // Return the arguments as a vector
+    }));
+    
+    global->define("head", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("head expects 1 argument");
+        try {
+            auto vec = std::any_cast<std::vector<Value>>(args[0]);
+            if (vec.empty()) throw std::runtime_error("head: empty list");
+            return vec[0];
+        } catch (const std::bad_any_cast&) {
+            throw std::runtime_error("head expects a list");
+        }
+    }));
+    
+    global->define("tail", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("tail expects 1 argument");
+        try {
+            auto vec = std::any_cast<std::vector<Value>>(args[0]);
+            if (vec.empty()) throw std::runtime_error("tail: empty list");
+            std::vector<Value> result(vec.begin() + 1, vec.end());
+            return result;
+        } catch (const std::bad_any_cast&) {
+            throw std::runtime_error("tail expects a list");
+        }
+    }));
+    
+    global->define("cons", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 2) throw std::runtime_error("cons expects 2 arguments");
+        try {
+            auto vec = std::any_cast<std::vector<Value>>(args[1]);
+            std::vector<Value> result;
+            result.push_back(args[0]);
+            result.insert(result.end(), vec.begin(), vec.end());
+            return result;
+        } catch (const std::bad_any_cast&) {
+            throw std::runtime_error("cons expects element and list");
+        }
+    }));
+    
+    global->define("length", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 1) throw std::runtime_error("length expects 1 argument");
+        try {
+            auto str = std::any_cast<std::string>(args[0]);
+            return static_cast<int>(str.length());
+        } catch (...) {
+            try {
+                auto vec = std::any_cast<std::vector<Value>>(args[0]);
+                return static_cast<int>(vec.size());
+            } catch (...) {
+                throw std::runtime_error("length expects string or list");
+            }
+        }
+    }));
+    
+    global->define("concat", NativeFunction([](const std::vector<Value>& args) -> Value {
+        if (args.size() != 2) throw std::runtime_error("concat expects 2 arguments");
+        try {
+            auto str1 = std::any_cast<std::string>(args[0]);
+            auto str2 = std::any_cast<std::string>(args[1]);
+            return str1 + str2;
+        } catch (...) {
+            throw std::runtime_error("concat expects 2 strings");
+        }
+    }));
+    
     // Console output
     global->define("print", NativeFunction([](const std::vector<Value>& args) -> Value {
         for (size_t i = 0; i < args.size(); i++) {
@@ -125,7 +325,33 @@ std::shared_ptr<Environment> Eva::createGlobalEnvironment() {
                         auto b = std::any_cast<bool>(args[i]);
                         std::cout << (b ? "true" : "false");
                     } catch (...) {
-                        std::cout << "[object]";
+                        try {
+                            auto vec = std::any_cast<std::vector<Value>>(args[i]);
+                            std::cout << "(";
+                            for (size_t j = 0; j < vec.size(); j++) {
+                                if (j > 0) std::cout << " ";
+                                // Recursively print vector elements
+                                try {
+                                    auto str = std::any_cast<std::string>(vec[j]);
+                                    std::cout << "\"" << str << "\"";
+                                } catch (...) {
+                                    try {
+                                        auto num = std::any_cast<int>(vec[j]);
+                                        std::cout << num;
+                                    } catch (...) {
+                                        try {
+                                            auto b = std::any_cast<bool>(vec[j]);
+                                            std::cout << (b ? "true" : "false");
+                                        } catch (...) {
+                                            std::cout << "[object]";
+                                        }
+                                    }
+                                }
+                            }
+                            std::cout << ")";
+                        } catch (...) {
+                            std::cout << "[object]";
+                        }
                     }
                 }
             }
