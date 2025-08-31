@@ -193,11 +193,34 @@ Eva::Value Eva::eval(ASTNodePtr exp, std::shared_ptr<Environment> env) {
             return env->define(name_node->getName(), value);
         }
         
-        // Assignment: (set x 20)
+        // Assignment: (set x 20) or (set (prop obj key) value)
         if (tag == "set") {
             if (elements.size() != 3) {
                 throw std::runtime_error("set expects 2 arguments");
             }
+            
+            // Check if we're setting a property: (set (prop obj key) value)
+            if (auto ref_list = std::dynamic_pointer_cast<ListNode>(elements[1])) {
+                if (!ref_list->empty()) {
+                    auto ref_first = std::dynamic_pointer_cast<SymbolNode>(ref_list->getElements()[0]);
+                    if (ref_first && ref_first->getName() == "prop") {
+                        // Property assignment: (set (prop instance propName) value)
+                        if (ref_list->size() != 3) {
+                            throw std::runtime_error("prop in set expects 2 arguments");
+                        }
+                        auto instanceEnv = std::any_cast<std::shared_ptr<Environment>>(
+                            eval(ref_list->getElements()[1], env));
+                        auto prop_name = std::dynamic_pointer_cast<SymbolNode>(ref_list->getElements()[2]);
+                        if (!prop_name) {
+                            throw std::runtime_error("Property name must be a symbol");
+                        }
+                        auto value = eval(elements[2], env);
+                        return instanceEnv->define(prop_name->getName(), value);
+                    }
+                }
+            }
+            
+            // Regular variable assignment
             auto name_node = std::dynamic_pointer_cast<SymbolNode>(elements[1]);
             if (!name_node) {
                 throw std::runtime_error("Variable name must be a symbol");
@@ -278,6 +301,131 @@ Eva::Value Eva::eval(ASTNodePtr exp, std::shared_ptr<Environment> env) {
             func.env = env; // closure
             
             return func;
+        }
+        
+        // Function declaration: (def square (x) (* x x))
+        // Syntactic sugar for: (var square (lambda (x) (* x x)))
+        if (tag == "def") {
+            auto varExp = Transformer::transformDefToLambda(elements);
+            return eval(varExp, env);
+        }
+        
+        // Switch expression: (switch (cond1 block1) ...)
+        // Syntactic sugar for nested if-expression
+        if (tag == "switch") {
+            auto ifExp = Transformer::transformSwitchToIf(elements);
+            return eval(ifExp, env);
+        }
+        
+        // For loop: (for init condition modifier body)
+        // Syntactic sugar for: (begin init (while condition (begin body modifier)))
+        if (tag == "for") {
+            auto whileExp = Transformer::transformForToWhile(elements);
+            return eval(whileExp, env);
+        }
+        
+        // Increment: (++ var)
+        if (tag == "++") {
+            auto setExp = Transformer::transformIncToSet(elements);
+            return eval(setExp, env);
+        }
+        
+        // Increment with value: (+= var value)
+        if (tag == "+=") {
+            auto setExp = Transformer::transformIncValToSet(elements);
+            return eval(setExp, env);
+        }
+        
+        // Decrement: (-- var)
+        if (tag == "--") {
+            auto setExp = Transformer::transformDecToSet(elements);
+            return eval(setExp, env);
+        }
+        
+        // Decrement with value: (-= var value)
+        if (tag == "-=") {
+            auto setExp = Transformer::transformDecValToSet(elements);
+            return eval(setExp, env);
+        }
+        
+        // Class declaration: (class Name Parent Body)
+        if (tag == "class") {
+            if (elements.size() != 4) {
+                throw std::runtime_error("class expects 3 arguments");
+            }
+            auto name_node = std::dynamic_pointer_cast<SymbolNode>(elements[1]);
+            if (!name_node) {
+                throw std::runtime_error("Class name must be a symbol");
+            }
+            const std::string& name = name_node->getName();
+            
+            // Evaluate parent (can be null)
+            std::shared_ptr<Environment> parentEnv = nullptr;
+            auto parent = eval(elements[2], env);
+            try {
+                parentEnv = std::any_cast<std::shared_ptr<Environment>>(parent);
+            } catch (...) {
+                // Parent is null, use current environment as parent
+                parentEnv = env;
+            }
+            
+            // Create class environment
+            auto classEnv = Environment::create({}, parentEnv);
+            
+            // Evaluate class body in class environment
+            eval(elements[3], classEnv);
+            
+            // Define class in current environment
+            return env->define(name, classEnv);
+        }
+        
+        // Class instantiation: (new ClassName args...)
+        if (tag == "new") {
+            if (elements.size() < 2) {
+                throw std::runtime_error("new expects at least 1 argument");
+            }
+            
+            auto classEnv = std::any_cast<std::shared_ptr<Environment>>(eval(elements[1], env));
+            auto instanceEnv = Environment::create({}, classEnv);
+            
+            // Collect constructor arguments
+            std::vector<Value> args;
+            args.push_back(instanceEnv); // 'this' parameter
+            for (size_t i = 2; i < elements.size(); i++) {
+                args.push_back(eval(elements[i], env));
+            }
+            
+            // Call constructor if it exists
+            try {
+                auto constructor = classEnv->lookup("constructor");
+                callUserDefinedFunction(constructor, args);
+            } catch (...) {
+                // No constructor is fine
+            }
+            
+            return instanceEnv;
+        }
+        
+        // Property access: (prop instance name)
+        if (tag == "prop") {
+            if (elements.size() != 3) {
+                throw std::runtime_error("prop expects 2 arguments");
+            }
+            auto instanceEnv = std::any_cast<std::shared_ptr<Environment>>(eval(elements[1], env));
+            auto name_node = std::dynamic_pointer_cast<SymbolNode>(elements[2]);
+            if (!name_node) {
+                throw std::runtime_error("Property name must be a symbol");
+            }
+            return instanceEnv->lookup(name_node->getName());
+        }
+        
+        // Super expression: (super ClassName)
+        if (tag == "super") {
+            if (elements.size() != 2) {
+                throw std::runtime_error("super expects 1 argument");
+            }
+            auto classEnv = std::any_cast<std::shared_ptr<Environment>>(eval(elements[1], env));
+            return classEnv->getParent();
         }
         
         // Function calls: (+ 1 2), (print "hello")

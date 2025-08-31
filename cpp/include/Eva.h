@@ -5,6 +5,7 @@
 #include <functional>
 #include "Environment.h"
 #include "AST.h"
+#include "Transformer.h"
 
 /**
  * Eva interpreter main class
