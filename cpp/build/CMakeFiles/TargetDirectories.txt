@@ -1,6 +1,0 @@
-/home/runner/work/eva-interpreter/eva-interpreter/cpp/build/CMakeFiles/eva_lib.dir
-/home/runner/work/eva-interpreter/eva-interpreter/cpp/build/CMakeFiles/test_environment.dir
-/home/runner/work/eva-interpreter/eva-interpreter/cpp/build/CMakeFiles/test_parser.dir
-/home/runner/work/eva-interpreter/eva-interpreter/cpp/build/CMakeFiles/test.dir
-/home/runner/work/eva-interpreter/eva-interpreter/cpp/build/CMakeFiles/edit_cache.dir
-/home/runner/work/eva-interpreter/eva-interpreter/cpp/build/CMakeFiles/rebuild_cache.dir

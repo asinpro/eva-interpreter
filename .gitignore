@@ -1,2 +1,8 @@
 .idea
 **/*.iml
+
+# C++ build artifacts
+cpp/build/
+*.o
+*.so
+*.a
